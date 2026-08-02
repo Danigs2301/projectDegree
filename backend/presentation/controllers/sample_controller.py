@@ -13,14 +13,18 @@ def create_sample():
         return jsonify({"error": e.errors()}), 400
 
     try:
-        sample = service.create_sample(
+        result = service.create_sample(
             process_id=body.process_id,
             measurements=[m.model_dump() for m in body.measurements]
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    return jsonify(sample.model_dump()), 201
+    response = {
+        "sample": result["sample"].model_dump(),
+        "detection": result["detection"]
+    }
+    return jsonify(response), 201
 
 
 def get_sample(sample_id: str):

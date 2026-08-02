@@ -32,3 +32,7 @@ export const detect = (data) => post("/detection/", data);
 // Alerts
 export const getAlertsByModel = (modelId) => get(`/alerts/model/${modelId}`);
 export const confirmAlert = (alertId) => patch(`/alerts/${alertId}/confirm`);
+
+// Summariy
+export const getAllSummaries = () => get("/summary/");
+export const getProcessSummary = (processId) => get(`/summary/${processId}`);

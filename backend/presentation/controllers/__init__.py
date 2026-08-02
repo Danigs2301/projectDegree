@@ -32,3 +32,4 @@ from .alert_controller import (
     confirm_alert
 )
 from .detection_controller import detect
+from .summary_controller import get_all_summaries, get_process_summary

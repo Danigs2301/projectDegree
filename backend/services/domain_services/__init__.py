@@ -11,3 +11,4 @@ from .sample_service import SampleService
 from .model_service import ModelService
 from .alert_service import AlertService
 from .detection_service import DetectionService
+from .summary_service import SummaryService

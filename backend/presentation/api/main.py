@@ -6,7 +6,8 @@ from presentation.routes import (
     sample_bp,
     model_bp,
     alert_bp,
-    detection_bp
+    detection_bp,
+    summary_bp
 )
 
 
@@ -22,6 +23,7 @@ app.register_blueprint(sample_bp)
 app.register_blueprint(model_bp)
 app.register_blueprint(alert_bp)
 app.register_blueprint(detection_bp)
+app.register_blueprint(summary_bp)
 
 """@app.teardown_appcontext
 def shutdown(exception=None):

@@ -11,3 +11,4 @@ class ChangeAlert(BaseModel):
     t2_statistic: float
     control_limit: float
     confirmed: bool = False
+    
