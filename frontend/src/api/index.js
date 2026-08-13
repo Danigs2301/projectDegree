@@ -33,6 +33,12 @@ export const detect = (data) => post("/detection/", data);
 export const getAlertsByModel = (modelId) => get(`/alerts/model/${modelId}`);
 export const confirmAlert = (alertId) => patch(`/alerts/${alertId}/confirm`);
 
-// Summariy
+// Summary
 export const getAllSummaries = () => get("/summary/");
-export const getProcessSummary = (processId) => get(`/summary/${processId}`);
+export const getProcessSummary = (processId, { from, to } = {}) => {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const query = params.toString();
+  return get(`/summary/${processId}${query ? `?${query}` : ""}`);
+};

@@ -8,7 +8,6 @@ import EmptyState from "../components/EmptyState";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
-  ReferenceLine,
 } from "recharts";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -62,25 +61,56 @@ const RANGE_OPTIONS = [
   { value: "all", label: "Todo el período" },
 ];
 
-function AnomalyRateChart({ data }) {
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+function DateRangeFilter({ startDate, endDate, onStartDateChange, onEndDateChange }) {
+  return (
+    <div className="flex items-center gap-3 flex-wrap bg-gray-50 rounded-xl p-3">
+      <span className="text-xs text-gray-500 font-medium">Rango de fechas:</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">Desde:</span>
+        <DatePicker
+          selected={startDate}
+          onChange={onStartDateChange}
+          selectsStart
+          startDate={startDate}
+          endDate={endDate}
+          maxDate={endDate || new Date()}
+          placeholderText="Fecha inicio"
+          dateFormat="dd/MM/yyyy"
+          isClearable
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white w-32"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">Hasta:</span>
+        <DatePicker
+          selected={endDate}
+          onChange={onEndDateChange}
+          selectsEnd
+          startDate={startDate}
+          endDate={endDate}
+          minDate={startDate}
+          maxDate={new Date()}
+          placeholderText="Fecha fin"
+          dateFormat="dd/MM/yyyy"
+          isClearable
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white w-32"
+        />
+      </div>
+      {(startDate || endDate) && (
+        <button
+          className="text-xs text-gray-400 hover:text-gray-600 underline"
+          onClick={() => { onStartDateChange(null); onEndDateChange(null); }}
+        >
+          Limpiar
+        </button>
+      )}
+    </div>
+  );
+}
 
+function AnomalyRateChart({ data }) {
   if (!data || data.length === 0)
     return <EmptyState message="Sin datos de detección aún" />;
-
-  const filtered =
-    startDate || endDate
-      ? data.filter((d) => {
-          const date = new Date(d.date);
-          const from = startDate ? new Date(startDate.setHours(0, 0, 0, 0)) : null;
-          const to = endDate ? new Date(endDate.setHours(23, 59, 59, 999)) : null;
-          if (from && to) return date >= from && date <= to;
-          if (from) return date >= from;
-          if (to) return date <= to;
-          return true;
-        })
-      : data;
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -97,76 +127,17 @@ function AnomalyRateChart({ data }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Desde:</span>
-          <DatePicker
-            selected={startDate}
-            onChange={(date) => setStartDate(date)}
-            selectsStart
-            startDate={startDate}
-            endDate={endDate}
-            maxDate={endDate || new Date()}
-            placeholderText="Fecha inicio"
-            dateFormat="dd/MM/yyyy"
-            isClearable
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white w-32"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Hasta:</span>
-          <DatePicker
-            selected={endDate}
-            onChange={(date) => setEndDate(date)}
-            selectsEnd
-            startDate={startDate}
-            endDate={endDate}
-            minDate={startDate}
-            maxDate={new Date()}
-            placeholderText="Fecha fin"
-            dateFormat="dd/MM/yyyy"
-            isClearable
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white w-32"
-          />
-        </div>
-        {(startDate || endDate) && (
-          <button
-            className="text-xs text-gray-400 hover:text-gray-600 underline"
-            onClick={() => { setStartDate(null); setEndDate(null); }}
-          >
-            Limpiar
-          </button>
-        )}
-        <span className="text-xs text-gray-400 ml-auto">
-          {filtered.length} día(s) mostrado(s)
-        </span>
-      </div>
-
       <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={filtered} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 10 }}
-            tickFormatter={(d) => d.slice(5)}
-          />
-          <YAxis
-            tick={{ fontSize: 10 }}
-            tickFormatter={(v) => `${v}%`}
-            domain={[0, 100]}
-          />
+          <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d) => d.slice(5)} />
+          <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="rate" radius={[4, 4, 0, 0]} minPointSize={4}>
-            {filtered.map((entry, index) => (
+            {data.map((entry, index) => (
               <Cell
                 key={index}
-                fill={
-                  entry.rate === 0
-                    ? "#22c55e"
-                    : entry.rate <= 10
-                    ? "#f59e0b"
-                    : "#ef4444"
-                }
+                fill={entry.rate === 0 ? "#22c55e" : entry.rate <= 10 ? "#f59e0b" : "#ef4444"}
               />
             ))}
           </Bar>
@@ -183,34 +154,52 @@ function VariableChart({ data, variableName }) {
   if (!data || data.length === 0)
     return <EmptyState message="Sin muestras registradas" />;
 
-  const values = data.map((d) => d.value);
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const std = Math.sqrt(
-    values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length
-  );
-  const ucl = parseFloat((mean + 3 * std).toFixed(4));
-  const lcl = parseFloat((mean - 3 * std).toFixed(4));
-  const meanFixed = parseFloat(mean.toFixed(4));
+  const hasModel = data.some((d) => d.is_anomaly !== null && d.is_anomaly !== undefined);
+  const anomalyCount = data.filter((d) => d.is_anomaly).length;
 
-  // Submuestreo para no sobrecargar el render
   const MAX_POINTS = 200;
   const step = Math.ceil(data.length / MAX_POINTS);
   const chartData = data
-    .filter((_, i) => i % step === 0)
-    .map((d, i) => ({ index: i + 1, value: d.value }));
+    .filter((d, i) => i % step === 0 || d.is_anomaly)  // nunca descarta una anomalía real por el submuestreo
+    .map((d, i) => ({
+      index: i + 1,
+      value: d.value,
+      contribution: d.contribution,
+      is_anomaly: d.is_anomaly,
+    }));
 
-  const outOfControl = chartData.filter(
-    (d) => d.value > ucl || d.value < lcl
-  ).length;
+  const maxContribution = Math.max(
+    1e-9,
+    ...chartData.filter((d) => d.is_anomaly && d.contribution != null).map((d) => d.contribution)
+  );
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow text-xs">
+        <p className="font-medium text-gray-700 mb-1">Muestra {label}</p>
+        <p className="text-gray-600">Valor: {d?.value?.toFixed(3)}</p>
+        {d?.contribution != null && (
+          <p className="text-purple-600">Aporte al T²: {d.contribution.toFixed(3)}</p>
+        )}
+        {d?.is_anomaly && <p className="text-red-500 font-medium">Anomalía detectada</p>}
+      </div>
+    );
+  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs text-gray-600 font-medium">{variableName}</p>
-        {outOfControl > 0 && (
-          <span className="text-xs text-red-500 font-medium">
-            {outOfControl} punto(s) fuera de control
-          </span>
+        {hasModel ? (
+          anomalyCount > 0 && (
+            <span className="text-xs text-red-500 font-medium">
+              {anomalyCount} anomalía(s) detectada(s)
+            </span>
+          )
+        ) : (
+          <span className="text-xs text-gray-400">Sin modelo entrenado</span>
         )}
       </div>
       <ResponsiveContainer width="100%" height={180}>
@@ -218,16 +207,7 @@ function VariableChart({ data, variableName }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="index" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
           <YAxis tick={{ fontSize: 9 }} />
-          <Tooltip
-            formatter={(value, name) => {
-              const labels = { value: variableName, ucl: "UCL", lcl: "LCL", mean: "CL" };
-              return [typeof value === "number" ? value.toFixed(3) : value, labels[name] ?? name];
-            }}
-            labelFormatter={(l) => `Muestra ${l}`}
-          />
-          <ReferenceLine y={ucl} stroke="#ef4444" strokeDasharray="4 3" label={{ value: "UCL", fill: "#ef4444", fontSize: 9, position: "right" }} />
-          <ReferenceLine y={meanFixed} stroke="#22c55e" strokeDasharray="4 3" label={{ value: "CL", fill: "#22c55e", fontSize: 9, position: "right" }} />
-          <ReferenceLine y={lcl} stroke="#ef4444" strokeDasharray="4 3" label={{ value: "LCL", fill: "#ef4444", fontSize: 9, position: "right" }} />
+          <Tooltip content={<CustomTooltip />} />
           <Line
             type="monotone"
             dataKey="value"
@@ -235,18 +215,12 @@ function VariableChart({ data, variableName }) {
             strokeWidth={1.5}
             dot={(props) => {
               const { cx, cy, payload } = props;
-              const isOut = payload.value > ucl || payload.value < lcl;
-              if (!isOut) return <g key={`dot-${payload.index}`} />;
+              if (!payload.is_anomaly) return <g key={`dot-${payload.index}`} />;
+              const r = payload.contribution != null
+                ? 4 + Math.min((payload.contribution / maxContribution) * 4, 4)
+                : 4;
               return (
-                <circle
-                  key={`dot-${payload.index}`}
-                  cx={cx}
-                  cy={cy}
-                  r={4}
-                  fill="#ef4444"
-                  stroke="white"
-                  strokeWidth={1.5}
-                />
+                <circle key={`dot-${payload.index}`} cx={cx} cy={cy} r={r} fill="#ef4444" stroke="white" strokeWidth={1.5} />
               );
             }}
             activeDot={{ r: 4 }}
@@ -259,8 +233,11 @@ function VariableChart({ data, variableName }) {
 
 export default function DashboardPage() {
   const [summaries, setSummaries] = useState([]);
+  const [selectedProcessId, setSelectedProcessId] = useState(null);
   const [selected, setSelected] = useState(null);
   const [variables, setVariables] = useState([]);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   const { execute: loadSummaries } = useAsync(getAllSummaries);
   const { execute: loadSummary } = useAsync(getProcessSummary);
@@ -275,14 +252,29 @@ export default function DashboardPage() {
     init();
   }, []);
 
-  const handleSelectProcess = useCallback(
-    async (processId) => {
-      if (!processId) { setSelected(null); return; }
-      const s = await loadSummary(processId);
+  const formatDate = (date) => {
+    if (!date) return undefined;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleSelectProcess = useCallback((processId) => {
+    setSelectedProcessId(processId || null);
+  }, []);
+
+  useEffect(() => {
+    async function fetchDetail() {
+      if (!selectedProcessId) { setSelected(null); return; }
+      const s = await loadSummary(selectedProcessId, {
+        from: formatDate(startDate),
+        to: formatDate(endDate),
+      });
       if (s) setSelected(s);
-    },
-    [loadSummary]
-  );
+    }
+    fetchDetail();
+  }, [selectedProcessId, startDate, endDate]);
 
   const processOptions = summaries.map((s) => ({
     value: s.process_id,
@@ -365,7 +357,7 @@ export default function DashboardPage() {
           <Select
             label="Selecciona un proceso"
             options={processOptions}
-            value={selected?.process_id ?? ""}
+            value={selectedProcessId ?? ""}
             onChange={(e) => handleSelectProcess(e.target.value)}
           />
         </div>
@@ -374,6 +366,12 @@ export default function DashboardPage() {
           <EmptyState message="Selecciona un proceso para ver su detalle" />
         ) : (
           <div className="flex flex-col gap-8">
+            <DateRangeFilter
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+            />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="Variables" value={selected.n_variables} />
               <StatCard label="Muestras totales" value={selected.n_samples} />
@@ -403,7 +401,13 @@ export default function DashboardPage() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-1">
                   Tasa de anomalías por día
                 </h3>
-                <AnomalyRateChart data={selected.anomaly_rate_chart} />
+                <AnomalyRateChart
+                  data={selected.anomaly_rate_chart}
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={setStartDate}
+                  onEndDateChange={setEndDate}
+                />
               </div>
             </div>
 

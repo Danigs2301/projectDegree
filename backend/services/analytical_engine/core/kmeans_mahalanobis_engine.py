@@ -5,6 +5,7 @@ from services.domain_services.cluster_profile import ClusterProfile
 from services.analytical_engine.utils import (
     compute_t2_control_limit,
     compute_mahalanobis,
+    compute_t2_contributions,
     find_optimal_k
 )
 
@@ -13,15 +14,17 @@ class KMeansMahalanobisEngine:
 
     K_MIN = 2
     K_MAX = 10
+    MIN_OBS_PER_VARIABLE = 3
 
     def train(self, X: np.ndarray) -> Tuple[List[ClusterProfile], float, int]:
-        """
-        Entrena KMeans con k óptimo por método del codo.
-        Devuelve los ClusterProfiles, accuracy (silhouette) y k elegido.
-        """
+        n_variables = X.shape[1]
+        min_cluster_size = n_variables * self.MIN_OBS_PER_VARIABLE
+
         k_range = list(range(self.K_MIN, min(self.K_MAX + 1, len(X))))
         inertias = []
         models = {}
+        valid_k_range = []
+        valid_inertias = []
 
         for k in k_range:
             km = KMeans(n_clusters=k, random_state=42, n_init=10)
@@ -29,7 +32,16 @@ class KMeansMahalanobisEngine:
             inertias.append(km.inertia_)
             models[k] = km
 
-        optimal_k = find_optimal_k(inertias, k_range)
+            cluster_sizes = np.bincount(km.labels_, minlength=k)
+            if cluster_sizes.min() >= min_cluster_size:
+                valid_k_range.append(k)
+                valid_inertias.append(km.inertia_)
+
+        if valid_k_range:
+            optimal_k = find_optimal_k(valid_inertias, valid_k_range)
+        else:
+            optimal_k = self.K_MIN  # ningún k produjo clusters suficientemente grandes; el más conservador
+
         best_model = models[optimal_k]
         labels = best_model.labels_
 
@@ -106,3 +118,34 @@ class KMeansMahalanobisEngine:
             assigned_profile.t2_control_limit,
             is_anomaly
         )
+    
+    def compute_variable_contributions(
+        self,
+        x_scaled: np.ndarray,
+        pca_components: np.ndarray,
+        pca_mean: np.ndarray,
+        cluster_profile: ClusterProfile
+    ) -> np.ndarray:
+        """
+        Descompone el T² de una muestra ya asignada a un cluster, atribuyendo
+        la contribución a cada variable ORIGINAL (antes de PCA), aprovechando
+        que los componentes de PCA son ortonormales.
+        """
+        centroid_pca = np.array(cluster_profile.centroid)
+        cov_pca = np.array(cluster_profile.covariance_matrix)
+
+        try:
+            inv_cov_pca = np.linalg.inv(cov_pca)
+        except np.linalg.LinAlgError:
+            inv_cov_pca = np.linalg.pinv(cov_pca)
+
+        # centroide reconstruido en espacio original escalado (equivalente a PCA.inverse_transform)
+        centroid_scaled = centroid_pca @ pca_components + pca_mean
+        diff_scaled = x_scaled - centroid_scaled
+
+        # matriz de covarianza inversa "jalada" de vuelta al espacio original
+        M = pca_components.T @ inv_cov_pca @ pca_components
+
+        return compute_t2_contributions(diff_scaled, M)
+        
+        

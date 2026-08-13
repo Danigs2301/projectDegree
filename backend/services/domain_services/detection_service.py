@@ -76,4 +76,11 @@ class DetectionService:
 
         mean = np.array(scaler_mean)
         scale = np.array(scaler_scale)
-        return (x - mean) / scale
+        x = (x - mean) / scale
+        
+        if model.parameters.get("use_pca"):
+            pca_components = np.array(model.parameters.get("pca_components", []))
+            pca_mean = np.array(model.parameters.get("pca_mean", []))
+            x = (x - pca_mean) @ pca_components.T
+        
+        return x

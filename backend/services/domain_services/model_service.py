@@ -5,6 +5,7 @@ from data.repositories.sample_repository import SampleRepository
 from services.analytical_engine.preprocessing import DataPreprocessor
 from services.analytical_engine.core import KMeansMahalanobisEngine
 from typing import Optional, List
+from datetime import datetime
 
 
 class ModelService:
@@ -86,8 +87,12 @@ class ModelService:
             "n_clusters": optimal_k,
             "scaler_mean": preprocessor.scaler.mean_.tolist(),
             "scaler_scale": preprocessor.scaler.scale_.tolist(),
-            "variable_ids": preprocessor.get_variable_ids()
+            "variable_ids": preprocessor.get_variable_ids(),
+            "use_pca": preprocessor.use_pca,
+            "pca_components": preprocessor.pca.components_.tolist() if preprocessor.pca is not None else None,
+            "pca_mean": preprocessor.pca.mean_.tolist() if preprocessor.pca is not None else None,
         }
         model.state = "trained"
+        model.training_date = datetime.utcnow()   # <-- nuevo: refleja cuándo se entrenó de verdad, no cuándo se creó el registro
 
         return self.repository.update(model)

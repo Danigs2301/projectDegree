@@ -112,7 +112,14 @@ class SampleService:
         x = np.array(row, dtype=float)
         mean = np.array(scaler_mean)
         scale = np.array(scaler_scale)
-        return (x - mean) / scale
+        x = (x - mean) / scale
+
+        if model.parameters.get("use_pca"):
+            pca_components = np.array(model.parameters.get("pca_components", []))
+            pca_mean = np.array(model.parameters.get("pca_mean", []))
+            x = (x - pca_mean) @ pca_components.T
+
+        return x
 
     def get_sample(self, sample_id: str) -> Optional[Sample]:
         sample = self.repository.find_by_id(sample_id)
