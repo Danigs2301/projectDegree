@@ -8,4 +8,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 ENV FLASK_APP=presentation/api/main.py
+ENV PYTHONPATH=/app
 CMD ["flask", "run", "--host", "0.0.0.0", "--port", "8000"]
