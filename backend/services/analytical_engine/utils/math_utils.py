@@ -3,14 +3,10 @@ from scipy import stats
 
 
 def compute_t2_control_limit(n_variables: int, n_observations: int, alpha: float = 0.05) -> float:
-    """
-    Límite de control T² de Hotelling usando distribución F.
-    Formula: T² = (p(n-1)/(n-p)) * F(alpha, p, n-p)
-    """
     p = n_variables
-    n = max(n_observations, p + 1)  # evita n - p <= 0 cuando el cluster es demasiado pequeño
+    n = max(n_observations, p + 1)
     f_critical = stats.f.ppf(1 - alpha, p, n - p)
-    return (p * (n - 1) / (n - p)) * f_critical
+    return (p * (n + 1) * (n - 1) / (n * (n - p))) * f_critical
 
 
 def compute_mahalanobis(x: np.ndarray, centroid: np.ndarray, cov_matrix: np.ndarray) -> float:

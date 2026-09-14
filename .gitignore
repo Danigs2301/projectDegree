@@ -1,0 +1,11 @@
+# Ignorar una carpeta
+env/
+# Ignorar otra carpeta
+__pycache__/
+# Ignorar todos los archivos .pyc
+*.pyc
+# Ignorar un archivo específico
+.env
+.zip
+.archive
+mongo_dump/
